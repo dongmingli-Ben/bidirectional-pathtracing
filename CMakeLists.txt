@@ -33,6 +33,7 @@ set(APPLICATION_3_1_SOURCE
     src/pathtracer/camera.cpp
     src/pathtracer/bsdf.cpp
     src/pathtracer/pathtracer.cpp
+    src/pathtracer/bidirection.cpp
 )
 
 set(APPLICATION_3_2_SOURCE
@@ -122,6 +123,7 @@ set(APPLICATION_HEADERS
     src/pathtracer/camera.h
     src/pathtracer/intersection.h
     src/pathtracer/pathtracer.h
+    src/pathtracer/bidirection.h
     src/pathtracer/ray.h
     src/pathtracer/raytraced_renderer.h
     src/pathtracer/sampler.h

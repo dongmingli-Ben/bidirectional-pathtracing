@@ -23,6 +23,12 @@ Vector3D UniformSphereSampler3D::get_sample() const {
   return Vector3D(cos(phi) * sinTheta, sin(phi) * sinTheta, z);
 }
 
+double UniformSphereSampler3D::pdf(const Vector3D& v) const {
+  double pdf = 0.25 / PI;
+
+  return pdf;
+}
+
 
 /**
  * A Sampler3D implementation with uniform distribution on unit hemisphere
@@ -40,6 +46,17 @@ Vector3D UniformHemisphereSampler3D::get_sample() const {
   double zs = cosf(theta);
 
   return Vector3D(xs, ys, zs);
+
+}
+
+/**
+ * A Sampler3D implementation with uniform distribution on unit hemisphere
+ */
+double UniformHemisphereSampler3D::pdf(const Vector3D& v) const {
+
+  double pdf = 0.5 / PI;
+
+  return pdf;
 
 }
 
@@ -65,6 +82,16 @@ Vector3D CosineWeightedHemisphereSampler3D::get_sample(double *pdf) const {
   double theta = 2. * PI * Xi2;
   *pdf = sqrt(1-Xi1) / PI;
   return Vector3D(r*cos(theta), r*sin(theta), sqrt(1-Xi1));
+}
+
+/**
+ * A Sampler3D implementation with cosine-weighted distribution on unit
+ * hemisphere. This functions gets the pdf evaluated at the given sample
+ */
+double CosineWeightedHemisphereSampler3D::pdf(const Vector3D& v) const {
+  double Xi1 = v.x*v.x + v.y*v.y;
+  double pdf = sqrt(1-Xi1) / PI;
+  return pdf;
 }
 
 

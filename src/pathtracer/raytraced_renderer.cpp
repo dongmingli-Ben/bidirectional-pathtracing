@@ -50,7 +50,7 @@ RaytracedRenderer::RaytracedRenderer(size_t ns_aa,
                        double focalDistance) {
   state = INIT;
 
-  pt = new PathTracer();
+  pt = new BidirectionalPathTracer();
 
   pt->ns_aa = ns_aa;                                        // Number of samples per pixel
   pt->max_ray_depth = max_ray_depth;                        // Maximum recursion ray depth

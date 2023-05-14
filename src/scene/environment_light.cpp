@@ -179,5 +179,12 @@ namespace CGL { namespace SceneObjects {
 
   }
 
+  Vector3D EnvironmentLight::sample_Le(Ray *ray, double* point_pdf,
+                    double* dir_pdf) const {
+    std::cout << "sample_Le not ready for EnvironmentLight" << std::endl;
+    assert(0);
+    return Vector3D();
+  }
+
 } // namespace SceneObjects
 } // namespace CGL

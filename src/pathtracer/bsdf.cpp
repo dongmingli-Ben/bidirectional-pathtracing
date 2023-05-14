@@ -73,6 +73,14 @@ Vector3D DiffuseBSDF::sample_f(const Vector3D wo, Vector3D *wi, double *pdf) {
 
 }
 
+
+double DiffuseBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
+  double pdf = sampler.pdf(wi);
+
+  return pdf;
+
+}
+
 void DiffuseBSDF::render_debugger_node()
 {
   if (ImGui::TreeNode(this, "Diffuse BSDF"))
@@ -96,6 +104,14 @@ Vector3D EmissionBSDF::sample_f(const Vector3D wo, Vector3D *wi, double *pdf) {
   *pdf = 1.0 / PI;
   *wi = sampler.get_sample(pdf);
   return Vector3D();
+}
+
+
+double EmissionBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
+  double pdf = sampler.pdf(wi);
+
+  return pdf;
+
 }
 
 void EmissionBSDF::render_debugger_node()

@@ -22,6 +22,13 @@ Vector3D DirectionalLight::sample_L(const Vector3D p, Vector3D* wi,
   return radiance;
 }
 
+Vector3D DirectionalLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  cout << "sample_Le not ready for DirectionalLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
 // Infinite Hemisphere Light //
 
 InfiniteHemisphereLight::InfiniteHemisphereLight(const Vector3D rad)
@@ -41,6 +48,13 @@ Vector3D InfiniteHemisphereLight::sample_L(const Vector3D p, Vector3D* wi,
   return radiance;
 }
 
+Vector3D InfiniteHemisphereLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  cout << "sample_Le not ready for InfiniteHemisphereLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
 // Point Light //
 
 PointLight::PointLight(const Vector3D rad, const Vector3D pos) : 
@@ -56,6 +70,15 @@ Vector3D PointLight::sample_L(const Vector3D p, Vector3D* wi,
   return radiance;
 }
 
+Vector3D PointLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  Ray r(position, sampler.get_sample());
+  *ray = r;
+  *point_pdf = 1;
+  *dir_pdf = 0.25 / PI;
+  return radiance;
+}
+
 
 // Spot Light //
 
@@ -66,6 +89,13 @@ SpotLight::SpotLight(const Vector3D rad, const Vector3D pos,
 
 Vector3D SpotLight::sample_L(const Vector3D p, Vector3D* wi,
                              double* distToLight, double* pdf) const {
+  return Vector3D();
+}
+
+Vector3D SpotLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  cout << "sample_Le not ready for SpotLight" << endl;
+  assert(0);
   return Vector3D();
 }
 
@@ -92,6 +122,21 @@ Vector3D AreaLight::sample_L(const Vector3D p, Vector3D* wi,
   return cosTheta < 0 ? radiance : Vector3D();
 };
 
+Vector3D AreaLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  Vector2D sample = sampler.get_sample() - Vector2D(0.5f, 0.5f);
+  Vector3D o = position + sample.x * dim_x;
+  Vector3D d = dir_sampler.get_sample(dir_pdf);
+  // transform local ray direction to global ray dir
+  Matrix3x3 o2w;
+  make_coord_space(o2w, direction);
+  Ray r(o, o2w * d);
+  *ray = r;
+
+  *point_pdf = 1. / area;
+  return radiance;
+}
+
 
 // Sphere Light //
 
@@ -105,6 +150,13 @@ Vector3D SphereLight::sample_L(const Vector3D p, Vector3D* wi,
   return Vector3D();
 }
 
+Vector3D SphereLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  cout << "sample_Le not ready for SphereLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
 // Mesh Light
 
 MeshLight::MeshLight(const Vector3D rad, const Mesh* mesh) {
@@ -113,6 +165,13 @@ MeshLight::MeshLight(const Vector3D rad, const Mesh* mesh) {
 
 Vector3D MeshLight::sample_L(const Vector3D p, Vector3D* wi, 
                              double* distToLight, double* pdf) const {
+  return Vector3D();
+}
+
+Vector3D MeshLight::sample_Le(Ray *ray,
+                                    double* point_pdf, double* dir_pdf) const {
+  cout << "sample_Le not ready for MeshLight" << endl;
+  assert(0);
   return Vector3D();
 }
 

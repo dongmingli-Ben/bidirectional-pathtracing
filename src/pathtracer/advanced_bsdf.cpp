@@ -28,6 +28,13 @@ Vector3D MirrorBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) {
   return reflectance / costheta;
 }
 
+
+double MirrorBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
+  std::cout << "sample_pdf not ready for MirrorBSDF" << std::endl;
+  assert(0);
+  return 0.;
+}
+
 void MirrorBSDF::render_debugger_node()
 {
   if (ImGui::TreeNode(this, "Mirror BSDF"))
@@ -134,6 +141,13 @@ Vector3D MicrofacetBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) 
   return out;
 }
 
+
+double MicrofacetBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
+  std::cout << "sample_pdf not ready for MicrofacetBSDF" << std::endl;
+  assert(0);
+  return 0.;
+}
+
 void MicrofacetBSDF::render_debugger_node()
 {
   if (ImGui::TreeNode(this, "Micofacet BSDF"))
@@ -162,6 +176,13 @@ Vector3D RefractionBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) 
   eta = wo.z > 0 ? (double) 1 / ior : ior;
   costheta = fabs(wi->z) / wi->norm();
   return transmittance / costheta / (eta*eta);
+}
+
+
+double RefractionBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
+  std::cout << "sample_pdf not ready for RefractionBSDF" << std::endl;
+  assert(0);
+  return 0.;
 }
 
 void RefractionBSDF::render_debugger_node()
@@ -214,6 +235,13 @@ Vector3D GlassBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) {
     double costheta = fabs(wi->z) / wi->norm();
     return (1-R) * transmittance / costheta / (eta*eta);
   }
+}
+
+
+double GlassBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
+  std::cout << "sample_pdf not ready for GlassBSDF" << std::endl;
+  assert(0);
+  return 0.;
 }
 
 void GlassBSDF::render_debugger_node()

@@ -84,6 +84,16 @@ class BSDF {
   virtual Vector3D sample_f (const Vector3D wo, Vector3D* wi, double* pdf) = 0;
 
   /**
+   * Evaluate sample pdf according to the distribution used in sample_f.
+   * Again, note that wo and wi should both be defined in the local coordinate
+   * system at the point of intersection.
+   * \param wo outgoing light direction in local space of point of intersection (assumed to be not important)
+   * \param wi address to store incident light direction
+   * \return pdf evaluated with given wo and wi
+   */
+  virtual double sample_pdf (const Vector3D& wo, const Vector3D& wi) const = 0;
+
+  /**
    * Get the emission value of the surface material. For non-emitting surfaces
    * this would be a zero energy Vector3D.
    * \return emission Vector3D of the surface material
@@ -130,6 +140,7 @@ class DiffuseBSDF : public BSDF {
 
   Vector3D f(const Vector3D wo, const Vector3D wi);
   Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  double sample_pdf (const Vector3D& wo, const Vector3D& wi) const;
   Vector3D get_emission() const { return Vector3D(); }
   bool is_delta() const { return false; }
 
@@ -180,6 +191,7 @@ public:
 
   Vector3D f(const Vector3D wo, const Vector3D wi);
   Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  double sample_pdf (const Vector3D& wo, const Vector3D& wi) const;
   Vector3D get_emission() const { return Vector3D(); }
   bool is_delta() const { return false; }
 
@@ -202,6 +214,7 @@ class MirrorBSDF : public BSDF {
 
   Vector3D f(const Vector3D wo, const Vector3D wi);
   Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  double sample_pdf (const Vector3D& wo, const Vector3D& wi) const;
   Vector3D get_emission() const { return Vector3D(); }
   bool is_delta() const { return true; }
 
@@ -225,6 +238,7 @@ class RefractionBSDF : public BSDF {
 
   Vector3D f(const Vector3D wo, const Vector3D wi);
   Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  double sample_pdf (const Vector3D& wo, const Vector3D& wi) const;
   Vector3D get_emission() const { return Vector3D(); }
   bool is_delta() const { return true; }
 
@@ -251,6 +265,7 @@ class GlassBSDF : public BSDF {
 
   Vector3D f(const Vector3D wo, const Vector3D wi);
   Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  double sample_pdf (const Vector3D& wo, const Vector3D& wi) const;
   Vector3D get_emission() const { return Vector3D(); }
   bool is_delta() const { return true; }
 
@@ -275,6 +290,7 @@ class EmissionBSDF : public BSDF {
 
   Vector3D f(const Vector3D wo, const Vector3D wi);
   Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  double sample_pdf (const Vector3D& wo, const Vector3D& wi) const;
   Vector3D get_emission() const { return radiance; }
   bool is_delta() const { return false; }
 

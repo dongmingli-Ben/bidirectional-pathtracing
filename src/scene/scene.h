@@ -36,6 +36,10 @@ class SceneLight {
  public:
   virtual Vector3D sample_L(const Vector3D p, Vector3D* wi,
                             double* distToLight, double* pdf) const = 0;
+  // this is meant for bidirectional path tracing (to sample a initial ray 
+  // from the light source)
+  virtual Vector3D sample_Le(Ray *ray,
+                            double* point_pdf, double* dir_pdf) const = 0;
   virtual bool is_delta_light() const = 0;
 
 };

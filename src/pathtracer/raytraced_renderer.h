@@ -30,6 +30,7 @@ using CGL::SceneObjects::BVHNode;
 using CGL::SceneObjects::BVHAccel;
 
 #include "pathtracer.h"
+#include "bidirection.h"
 
 namespace CGL {
 

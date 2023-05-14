@@ -50,7 +50,7 @@ namespace CGL {
         Vector3D estimate_direct_lighting_hemisphere(const Ray& r, const SceneObjects::Intersection& isect);
         Vector3D estimate_direct_lighting_importance(const Ray& r, const SceneObjects::Intersection& isect);
 
-        Vector3D est_radiance_global_illumination(const Ray& r);
+        virtual Vector3D est_radiance_global_illumination(const Ray& r);
         Vector3D zero_bounce_radiance(const Ray& r, const SceneObjects::Intersection& isect);
         Vector3D one_bounce_radiance(const Ray& r, const SceneObjects::Intersection& isect);
         Vector3D at_least_one_bounce_radiance(const Ray& r, const SceneObjects::Intersection& isect);
@@ -66,7 +66,7 @@ namespace CGL {
         /**
          * Trace a camera ray given by the pixel coordinate.
          */
-        void raytrace_pixel(size_t x, size_t y);
+        virtual void raytrace_pixel(size_t x, size_t y);
 
         // Integrator sampling settings //
 
