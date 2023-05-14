@@ -34,3 +34,4 @@ $EXEC -t 2 -s 512 -a 64 0.05 -l 4 -m 5 -b 0.6 -d 5.1 -r 480 360 -f dragon_lr0.6_
 # $EXEC -t 2 -s 4 -l 64 -m 1 -e ../exr/field.exr -f bunny_microfacet_uniform_s4_l64_m1_efield.png ../dae/sky/bunny_microfacet_cu_unlit.dae
 
 ./build/pathtracer -t 8 -s 4 -l 4 -m 5 -r 480 360 ./dae/sky/CBspheres.dae
+./build/pathtracer -t 8 -s 4 -l 4 -m 5 -r 480 360 dae/sky/CBspheres_lambertian.dae

@@ -23,12 +23,13 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
   v.alpha = init_radiance / point_pdf;
   v.isect.n = init_normal;
   v.position = r.o;
+  v.q = 1.;
   path.push_back(v);
 
   int i = 2;
   Intersection isect;
   double prev_pdf = dir_pdf;
-  Vector3D prev_f(1., 1., 1.), prev_n(init_normal);
+  Vector3D prev_f(1., 1., 1.), prev_n(init_normal);  // TODO: multiply cos theta for f ???
   // determine length with russian roulette
   while (bvh->intersect(r, &isect)) {
     double p_keep;
@@ -46,10 +47,6 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
     f = isect.bsdf->sample_f(w_out, &wi, &pdf);
     wi_world = o2w * wi;
     wi_world.normalize();
-    // update next ray
-    Ray ray(hit_p, wi_world, (int)r.depth+1);
-    ray.min_t = EPS_F;
-    r = ray;
 
     // update vertex
     v.isect = isect;
@@ -57,15 +54,26 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
     g = fabs(dot(prev_n, r.d) * dot(isect.n, r.d)) / (isect.t * isect.t);
     v.p = path[i-1].p * prev_pdf * g;
     v.alpha = path[i-1].alpha * prev_f / prev_pdf;
-    v.position = r.o;
+    v.position = hit_p;
 
-    // check path continuation
-    p_keep = i > min_subpath_length ? min(1., f.norm() / pdf) : 1;
+    // update next ray
+    Ray ray(hit_p, wi_world, (int)r.depth+1);
+    ray.min_t = EPS_F;
+    r = ray;
+
+    p_keep = 1;
     v.q = p_keep;
     path.push_back(v);
-    if (!coin_flip(p_keep)) {
+    if (i >= max_ray_depth + 1) {
       break;
     }
+    // // check path continuation (with roulette)
+    // p_keep = i > min_subpath_length ? min(1., f.norm() / pdf) : 1;
+    // v.q = p_keep;
+    // path.push_back(v);
+    // if (!coin_flip(p_keep)) {
+    //   break;
+    // }
 
     // update prev vertex info
     prev_f = f;
@@ -78,13 +86,13 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
 
 
 Ray BidirectionalPathTracer::sample_light_ray(double &point_pdf,
-    double &dir_pdf, Vector3D &init_radiance) {
+    double &dir_pdf, Vector3D &init_radiance, Vector3D& light_init_normal) {
   // randomly sample a light source
   int light_id = discrete_sampler.get_sample(0, scene->lights.size()-1);
   SceneLight *light = scene->lights[light_id];
   Ray r;
   Vector3D rad;
-  rad = light->sample_Le(&r, &point_pdf, &dir_pdf);
+  rad = light->sample_Le(&r, &point_pdf, &dir_pdf, &light_init_normal);
   point_pdf /= scene->lights.size();
   init_radiance = rad;
   return r;
@@ -194,13 +202,16 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
   Vector3D c;
   if (i_light == 0) {
     // c_{0,t} = L_e(z_{t-1} -> z_{t-2})
-    c = light_path[1].alpha * light_path[1].p;
+    if (i_eye > 1) {  // eye path intersect with light source
+      c = eye_path[i_eye].isect.bsdf->get_emission();
+    }
   } else {
     Vector3D eye_ray, light_ray, connect_ray;
     Vector3D f_eye, f_light;
     if (i_eye == 1) {
       // light path directly connects to camera lens, which does not
       // contribute to the current pixel
+      // todo: this is a special case, the illuminance contributes to the `light` image
       f_eye = Vector3D(0., 0., 0.);
     } else {
       eye_ray = eye_path[i_eye-1].position - eye_path[i_eye].position;
@@ -214,14 +225,15 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
     } else {
       light_ray = light_path[i_light-1].position - eye_path[i_light].position;
       light_ray.normalize();
-      connect_ray = light_path[i_eye].position - eye_path[i_light].position;
+      connect_ray = eye_path[i_eye].position - light_path[i_light].position;
       connect_ray.normalize();
-      f_light = light_path[i_eye].isect.bsdf->f(light_ray, connect_ray);
+      f_light = light_path[i_light].isect.bsdf->f(light_ray, connect_ray);
     }
-    connect_ray = light_path[i_eye].position - eye_path[i_light].position;
+    connect_ray = light_path[i_light].position - eye_path[i_eye].position;
     connect_ray.normalize();
     double g;
     Ray r(light_path[i_light].position, connect_ray);
+    r.min_t = EPS_F;
     Intersection isect;
     if (!bvh->intersect(r, &isect)) {
       return Vector3D();
@@ -247,14 +259,15 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
 
   // main workflow of bidirectional path tracing
   vector<PathVertex> eye_path, light_path;
-  prepare_bidirectional_subpath(r, 1., 1., eye_path, Vector3D(1, 1, 1), r.d);
+  prepare_bidirectional_subpath(r, 1., 1., eye_path, Vector3D(1., 1., 1.), r.d);
   Ray light_init_ray;
-  Vector3D light_init_radiance;
+  Vector3D light_init_radiance, light_init_normal;
   double light_pdf, light_dir_pdf;
-  light_init_ray = sample_light_ray(light_pdf, light_dir_pdf, light_init_radiance);
+  light_init_ray = sample_light_ray(light_pdf, light_dir_pdf, light_init_radiance,
+                                    light_init_normal);
   prepare_bidirectional_subpath(light_init_ray, light_pdf, light_dir_pdf, 
                                 light_path, light_init_radiance,
-                                light_init_ray.d);
+                                light_init_normal);
 
   // connect different paths
   for (int i = 1; i < eye_path.size(); i++) {

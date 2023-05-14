@@ -27,7 +27,7 @@ namespace CGL {
     
     class PathVertex {
         public:
-            PathVertex() : p(1.), alpha(1.) {}
+            PathVertex() : p(1.), q(1.), alpha(1.) {}
 
             Intersection isect;
             double p;
@@ -46,7 +46,7 @@ namespace CGL {
 
         // sample the first vertex and the second vertex of the light path
         Ray sample_light_ray(double &point_pdf, double &dir_pdf,
-            Vector3D &init_radiance);
+            Vector3D &init_radiance, Vector3D &light_init_normal);
 
         /* 1-indexed, 1 => on the light source / camera len
          * \param light_pdf point pdf of the init point of the light path, which
