@@ -10,6 +10,12 @@ using namespace CGL::SceneObjects;
 
 namespace CGL {
 
+std::ostream& operator<<(std::ostream& os, const PathVertex& v) {
+    os << "position: " << v.position << " alpha: " << v.alpha
+         << " p: " << v.p << " q: " << v.q;
+    return os;
+}
+
 
 void BidirectionalPathTracer::prepare_bidirectional_subpath(
     Ray r, const double point_pdf, 
@@ -52,7 +58,9 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
     v.isect = isect;
     double g; // geometry term
     g = fabs(dot(prev_n, r.d) * dot(isect.n, r.d)) / (isect.t * isect.t);
+    // std::cout << "g: " << g << " prev_pdf: " << prev_pdf << " p_{i-1}: " << path[i-1].p << std::endl;
     v.p = path[i-1].p * prev_pdf * g;
+    // std::cout << "v.p: "  << path[i-1].p * prev_pdf * g << std::endl;
     v.alpha = path[i-1].alpha * prev_f / prev_pdf;
     v.position = hit_p;
 
@@ -64,6 +72,7 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
     p_keep = 1;
     v.q = p_keep;
     path.push_back(v);
+    // std::cout << i << " " << v << std::endl;
     if (i >= max_ray_depth + 1) {
       break;
     }
@@ -214,34 +223,57 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
       // todo: this is a special case, the illuminance contributes to the `light` image
       f_eye = Vector3D(0., 0., 0.);
     } else {
+      Matrix3x3 o2w;
+      make_coord_space(o2w, eye_path[i_eye].isect.n);
+      Matrix3x3 w2o = o2w.T();
+
       eye_ray = eye_path[i_eye-1].position - eye_path[i_eye].position;
       eye_ray.normalize();
+      eye_ray = w2o * eye_ray;
+
       connect_ray = light_path[i_light].position - eye_path[i_eye].position;
       connect_ray.normalize();
+      connect_ray = w2o * connect_ray;
+
       f_eye = eye_path[i_eye].isect.bsdf->f(eye_ray, connect_ray);
     }
+    // std::cout << "f_eye: " << f_eye << std::endl;
     if (i_light == 1) {
       f_light = Vector3D(1., 1., 1.);
     } else {
-      light_ray = light_path[i_light-1].position - eye_path[i_light].position;
+      Matrix3x3 o2w;
+      make_coord_space(o2w, light_path[i_light].isect.n);
+      Matrix3x3 w2o = o2w.T();
+
+      light_ray = light_path[i_light-1].position - light_path[i_light].position;
       light_ray.normalize();
+      light_ray = w2o * light_ray;
+
       connect_ray = eye_path[i_eye].position - light_path[i_light].position;
       connect_ray.normalize();
+      connect_ray = w2o * connect_ray;
+
       f_light = light_path[i_light].isect.bsdf->f(light_ray, connect_ray);
     }
+    // std::cout << "f_light: " << f_light << std::endl;
+    double dist;
     connect_ray = light_path[i_light].position - eye_path[i_eye].position;
+    dist = connect_ray.norm();
     connect_ray.normalize();
     double g;
-    Ray r(light_path[i_light].position, connect_ray);
+    Ray r(eye_path[i_eye].position, connect_ray);
     r.min_t = EPS_F;
+    r.max_t = dist - EPS_F;
     Intersection isect;
-    if (!bvh->intersect(r, &isect)) {
+    if (bvh->intersect(r, &isect)) {
       return Vector3D();
     } else {
       g = fabs(dot(light_path[i_light].isect.n, connect_ray) * dot(eye_path[i_eye].isect.n, connect_ray))
-        / (isect.t * isect.t);
+        / (dist * dist);
     }
+    // std::cout << "g: " << g << std::endl;
     c = f_eye * g * f_light;
+    // std::cout << "c: " << c << std::endl;
   }
   // multiple importance sampling
   double w = multiple_importance_sampling_weight(i_eye, i_light, eye_path, light_path, light_pdf);
@@ -270,8 +302,8 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
                                 light_init_normal);
 
   // connect different paths
-  for (int i = 1; i < eye_path.size(); i++) {
-    for (int j = 0; j < light_path.size(); j++) {
+  for (int i = 1; i < min(3, (int) eye_path.size()); i++) {
+    for (int j = 0; j < min(2, (int) light_path.size()); j++) {
 
       Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path, light_pdf);
       L_out += L_in;

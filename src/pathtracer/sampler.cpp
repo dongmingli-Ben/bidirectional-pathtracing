@@ -89,8 +89,7 @@ Vector3D CosineWeightedHemisphereSampler3D::get_sample(double *pdf) const {
  * hemisphere. This functions gets the pdf evaluated at the given sample
  */
 double CosineWeightedHemisphereSampler3D::pdf(const Vector3D& v) const {
-  double Xi1 = v.x*v.x + v.y*v.y;
-  double pdf = sqrt(1-Xi1) / PI;
+  double pdf = v.z / PI;
   return pdf;
 }
 

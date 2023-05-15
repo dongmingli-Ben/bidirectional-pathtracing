@@ -36,6 +36,8 @@ namespace CGL {
             Vector3D alpha, position;
     };
 
+    std::ostream& operator<<(std::ostream& os, const PathVertex& v);
+
 
     class BidirectionalPathTracer: public PathTracer {
         public:
