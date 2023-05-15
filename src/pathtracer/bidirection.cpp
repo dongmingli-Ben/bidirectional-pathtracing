@@ -71,20 +71,20 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
     ray.min_t = EPS_F;
     r = ray;
 
-    p_keep = 1;
-    v.q = p_keep;
-    path.push_back(v);
-    // std::cout << i << " " << v << std::endl;
-    if (i >= max_ray_depth + 1) {
-      break;
-    }
-    // // check path continuation (with roulette)
-    // p_keep = i > min_subpath_length ? min(1., f.norm() / pdf) : 1;
+    // p_keep = 1;
     // v.q = p_keep;
     // path.push_back(v);
-    // if (!coin_flip(p_keep)) {
+    // // std::cout << i << " " << v << std::endl;
+    // if (i >= max_ray_depth + 1) {
     //   break;
     // }
+    // check path continuation (with roulette)
+    p_keep = i > min_subpath_length ? min(1., f.norm() / pdf) : 1;
+    v.q = p_keep;
+    path.push_back(v);
+    if (!coin_flip(p_keep)) {
+      break;
+    }
 
     // update prev vertex info
     prev_f = f;
