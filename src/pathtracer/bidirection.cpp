@@ -61,7 +61,9 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
     // std::cout << "g: " << g << " prev_pdf: " << prev_pdf << " p_{i-1}: " << path[i-1].p << std::endl;
     v.p = path[i-1].p * prev_pdf * g;
     // std::cout << "v.p: "  << path[i-1].p * prev_pdf * g << std::endl;
-    v.alpha = path[i-1].alpha * prev_f / prev_pdf;
+    // * add costheta according to: https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing#RandomWalk
+    v.alpha = path[i-1].alpha * fabs(dot(prev_n, r.d)) * prev_f / prev_pdf;  // todo: costheta is needed ??? !!! (THIS SEEMS CRUCIAL, although it does not follow veach's paper, p. 329)
+    // std::cout << "v.alpha: "  << v.alpha << " prev_f: " << prev_f << " prev_pdf: " << prev_pdf << std::endl;
     v.position = hit_p;
 
     // update next ray
@@ -104,6 +106,7 @@ Ray BidirectionalPathTracer::sample_light_ray(double &point_pdf,
   rad = light->sample_Le(&r, &point_pdf, &dir_pdf, &light_init_normal);
   point_pdf /= scene->lights.size();
   init_radiance = rad;
+  r.min_t = EPS_F;  // avoid intersecting with itself (when generating light path)
   return r;
 }
 
@@ -302,9 +305,9 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
                                 light_init_normal);
 
   // connect different paths
-  for (int i = 1; i < min(3, (int) eye_path.size()); i++) {
-    for (int j = 0; j < min(2, (int) light_path.size()); j++) {
-
+  for (int i = 1; i < eye_path.size(); i++) {
+    for (int j = 0; j < light_path.size(); j++) {
+      // if (i + j > 5) continue;  // do not consider bounces more than 1 for now
       Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path, light_pdf);
       L_out += L_in;
     }
