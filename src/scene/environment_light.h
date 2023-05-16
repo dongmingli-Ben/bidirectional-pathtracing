@@ -33,6 +33,9 @@ public:
     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return false; }
   /**
     * Returns the color found on the environment map by travelling in a specific

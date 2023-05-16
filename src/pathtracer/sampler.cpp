@@ -56,7 +56,7 @@ double UniformHemisphereSampler3D::pdf(const Vector3D& v) const {
 
   double pdf = 0.5 / PI;
 
-  return pdf;
+  return v.z > 0 ? pdf : 0.;
 
 }
 
@@ -89,7 +89,7 @@ Vector3D CosineWeightedHemisphereSampler3D::get_sample(double *pdf) const {
  * hemisphere. This functions gets the pdf evaluated at the given sample
  */
 double CosineWeightedHemisphereSampler3D::pdf(const Vector3D& v) const {
-  double pdf = v.z / PI;
+  double pdf = v.z > 0 ? v.z / PI : 0.;
   return pdf;
 }
 

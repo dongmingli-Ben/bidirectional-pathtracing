@@ -186,5 +186,13 @@ namespace CGL { namespace SceneObjects {
     return Vector3D();
   }
 
+  Vector3D EnvironmentLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const {
+    std::cout << "sample_Le_point not ready for EnvironmentLight" << std::endl;
+    assert(0);
+    return Vector3D();
+  }
+
 } // namespace SceneObjects
 } // namespace CGL

@@ -20,6 +20,9 @@ class DirectionalLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return true; }
 
  private:
@@ -37,6 +40,9 @@ class InfiniteHemisphereLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return false; }
 
   Vector3D radiance;
@@ -55,6 +61,9 @@ class PointLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return true; }
 
   Vector3D radiance;
@@ -73,6 +82,9 @@ class SpotLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return true; }
 
   Vector3D radiance;
@@ -93,6 +105,9 @@ class AreaLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return false; }
 
   Vector3D radiance;
@@ -115,6 +130,9 @@ class SphereLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return false; }
 
   const SphereObject* sphere;
@@ -132,6 +150,9 @@ class MeshLight : public SceneLight {
                     double* pdf) const;
   Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const;
+  Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const;
   bool is_delta_light() const { return false; }
 
   const Mesh* mesh;

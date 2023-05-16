@@ -40,6 +40,16 @@ class SceneLight {
   // from the light source)
   virtual Vector3D sample_Le(Ray *ray, double* point_pdf, double* dir_pdf,
                              Vector3D *normal) const = 0;
+  // this is meant for bidirectional path tracing (to calculate the point
+  // and directional pdf given the point)
+  // * note: wi points towards the light source
+  virtual Vector3D sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *point,
+                            double* distToLight, double* point_pdf,
+                            double* dir_pdf, Vector3D *normal) const = 0;
+  // // this is meant for bidirectional path tracing (to calculate the point
+  // // and directional pdf given the point and the light point)
+  // virtual Vector3D sample_Le_dir(const Vector3D p, const Vector3D light_point,
+  //                           double* dir_pdf) const = 0;
   virtual bool is_delta_light() const = 0;
 
 };
