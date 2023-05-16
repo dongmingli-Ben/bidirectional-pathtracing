@@ -122,7 +122,7 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
             const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path,
             const PathVertex& light_sample) {
   // // no MIS
-  // return 1. / (i_eye + i_light);
+  // return i_eye+i_light > 1 ? 1. / (i_eye + i_light - 1) : 1.;
   // MIS
   double w_inv = 0., ratio = 1.;
   w_inv += ratio;
@@ -130,7 +130,11 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
   PathVertex cur_v, next_v, prev_v;
   for (int i = i_eye; i > 2; i--) {  // set to 2: do not consider directly connect light path to eye for now
     cur_v = eye_path[i];
-    prev_v = i == i_eye ? light_path[i_light] : eye_path[i+1];
+    if (i == i_eye) {
+      prev_v = i_light == 1 ? light_sample : light_path[i_light];
+    } else {
+      prev_v = eye_path[i+1];
+    }
     next_v = eye_path[i-1];
     double nom, denom;
     double p, g;
@@ -335,7 +339,7 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
       connect_ray.normalize();
       connect_ray = w2o * connect_ray;
 
-      f_light = light_path[i_light].isect.bsdf->f(light_ray, connect_ray);
+      f_light = light_path[i_light].isect.bsdf->f(connect_ray, light_ray);
     }
     // std::cout << "f_light: " << f_light << std::endl;
     double dist;
@@ -347,6 +351,7 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
     r.min_t = EPS_F;
     r.max_t = dist - EPS_F;
     Intersection isect;
+    // todo: potential problem: connecting paths through interior area of objects
     if (bvh->intersect(r, &isect)) {
       return Vector3D();
     } else {
@@ -388,7 +393,8 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
   // connect different paths
   for (int i = 1; i < eye_path.size(); i++) {
     for (int j = 0; j < light_path.size(); j++) {
-      if (i + j > 4) continue;  // do not consider bounces more than 1 for now
+      // if (i + j != 4) continue;  // do not consider bounces more than 1 for now
+      // if (i != 2) continue;  // do not consider bounces more than 1 for now
       Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path);
       L_out += L_in;
     }

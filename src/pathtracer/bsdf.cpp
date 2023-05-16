@@ -53,6 +53,9 @@ Vector3D DiffuseBSDF::f(const Vector3D wo, const Vector3D wi) {
   // TODO (Part 3.1):
   // This function takes in both wo and wi and returns the evaluation of
   // the BSDF for those two directions.
+  if (wo.z < 0. || wi.z < 0.) {
+    return Vector3D();  // * note: assume z < 0 is interior area (no light transport)
+  }
   return reflectance / PI;
 
 }
