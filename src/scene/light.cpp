@@ -37,6 +37,19 @@ Vector3D DirectionalLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vecto
   return Vector3D();
 }
 
+bool DirectionalLight::contain_point(const Vector3D& p) const {
+  cout << "contain_point not ready for DirectionalLight" << endl;
+  assert(0);
+  return false;
+}
+
+Vector3D DirectionalLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  cout << "sample_pdf not ready for DirectionalLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
 // Infinite Hemisphere Light //
 
 InfiniteHemisphereLight::InfiniteHemisphereLight(const Vector3D rad)
@@ -67,6 +80,19 @@ Vector3D InfiniteHemisphereLight::sample_Le_point(const Vector3D p, Vector3D* wi
                             double* distToLight, double* point_pdf,
                             double* dir_pdf, Vector3D *normal) const {
   cout << "sample_Le_point not ready for InfiniteHemisphereLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
+bool InfiniteHemisphereLight::contain_point(const Vector3D& p) const {
+  cout << "contain_point not ready for InfiniteHemisphereLight" << endl;
+  assert(0);
+  return false;
+}
+
+Vector3D InfiniteHemisphereLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  cout << "sample_pdf not ready for InfiniteHemisphereLight" << endl;
   assert(0);
   return Vector3D();
 }
@@ -103,9 +129,26 @@ Vector3D PointLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *p
   *wi = d.unit();
   *distToLight = d.norm();
   *point_pdf = 1.0;
-  *dir_pdf = 0.24 / PI;
+  *dir_pdf = 0.25 / PI;
   *normal = - (*wi);
   *point = position;
+  return radiance;
+}
+
+bool PointLight::contain_point(const Vector3D& p) const {
+  // although a ray will never intersect with a point light
+  return (p - position).norm() < EPS_F ? true : false;
+}
+
+Vector3D PointLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  if (!contain_point(p)) {
+    *point_pdf = 0.;
+    *dir_pdf = 0.;
+    return Vector3D();
+  }
+  *point_pdf = 1.0;
+  *dir_pdf = 0.25 / PI;
   return radiance;
 }
 
@@ -133,6 +176,19 @@ Vector3D SpotLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *po
                             double* distToLight, double* point_pdf,
                             double* dir_pdf, Vector3D *normal) const {
   cout << "sample_Le_point not ready for SpotLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
+bool SpotLight::contain_point(const Vector3D& p) const {
+  cout << "contain_point not ready for SpotLight" << endl;
+  assert(0);
+  return false;
+}
+
+Vector3D SpotLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  cout << "sample_pdf not ready for SpotLight" << endl;
   assert(0);
   return Vector3D();
 }
@@ -198,6 +254,35 @@ Vector3D AreaLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *po
   return cosTheta < 0 ? radiance : Vector3D();
 }
 
+bool AreaLight::contain_point(const Vector3D& p) const {
+  Vector3D d;
+  d = position - p;
+  d.normalize();
+  return fabs(dot(d, direction)) < EPS_F ? true : false;
+}
+
+Vector3D AreaLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  if (!contain_point(p)) {
+    *point_pdf = 0.;
+    *dir_pdf = 0.;
+    return Vector3D();
+  }
+  *point_pdf = 1. / area;
+
+  Matrix3x3 o2w;
+  make_coord_space(o2w, direction);
+  Matrix3x3 w2o = o2w.T();
+
+  Vector3D wi_local;
+  wi_local = w2o * (-wi);  // wi points towards the light source
+  wi_local.normalize();
+
+  *dir_pdf = dir_sampler.pdf(wi_local);
+
+  return *dir_pdf > 0. ? radiance : Vector3D();
+}
+
 
 // Sphere Light //
 
@@ -226,6 +311,19 @@ Vector3D SphereLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *
   return Vector3D();
 }
 
+bool SphereLight::contain_point(const Vector3D& p) const {
+  cout << "contain_point not ready for SphereLight" << endl;
+  assert(0);
+  return false;
+}
+
+Vector3D SphereLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  cout << "sample_pdf not ready for SphereLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
 // Mesh Light
 
 MeshLight::MeshLight(const Vector3D rad, const Mesh* mesh) {
@@ -248,6 +346,19 @@ Vector3D MeshLight::sample_Le_point(const Vector3D p, Vector3D* wi, Vector3D *po
                             double* distToLight, double* point_pdf,
                             double* dir_pdf, Vector3D *normal) const {
   cout << "sample_Le_point not ready for MeshLight" << endl;
+  assert(0);
+  return Vector3D();
+}
+
+bool MeshLight::contain_point(const Vector3D& p) const {
+  cout << "contain_point not ready for MeshLight" << endl;
+  assert(0);
+  return false;
+}
+
+Vector3D MeshLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                            double* point_pdf, double* dir_pdf) const {
+  cout << "sample_pdf not ready for MeshLight" << endl;
   assert(0);
   return Vector3D();
 }

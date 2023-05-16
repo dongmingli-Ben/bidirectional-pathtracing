@@ -41,7 +41,7 @@ namespace CGL {
             bool new_light_sample;
             double light_dir_pdf; // this value is only valid for the first point 
                                   // on the light source. it is for MIS with newly sampled
-                                  // light point
+                                  // light point (or old light point)
 
     };
 
@@ -66,12 +66,11 @@ namespace CGL {
             should be obtained from sample_light_ray.
          */
         Vector3D estimate_bidirection_radiance(int i_eye, int i_light,
-            const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path,
-            double light_pdf);
+            const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path);
 
         double multiple_importance_sampling_weight(int i_eye, int i_light,
             const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path,
-            double light_pdf, const PathVertex& light_sample);
+            const PathVertex& light_sample);
 
         size_t min_subpath_length = 2;
         Sampler1D discrete_sampler;

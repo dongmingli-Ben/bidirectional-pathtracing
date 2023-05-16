@@ -33,6 +33,7 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
   v.q = 1.;
   v.is_light = is_light;
   v.light = light;
+  v.light_dir_pdf = dir_pdf;
   path.push_back(v);
 
   int i = 2;
@@ -119,113 +120,148 @@ Ray BidirectionalPathTracer::sample_light_ray(double &point_pdf,
 
 double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, int i_light,
             const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path,
-            double light_pdf, const PathVertex& light_sample) {
-  // no MIS
-  return 1. / (i_eye + i_light);
-  // // MIS
-  // double w_inv = 0., ratio = 1.;
-  // w_inv += ratio;
-  // // travel along the eye path
-  // PathVertex cur_v, next_v, prev_v;
-  // for (int i = i_eye; i > 1; i--) {
-  //   cur_v = eye_path[i];
-  //   prev_v = i == i_eye ? light_path[i_light] : eye_path[i+1];
-  //   next_v = eye_path[i-1];
-  //   double nom, denom;
-  //   double p, g;
+            const PathVertex& light_sample) {
+  // // no MIS
+  // return 1. / (i_eye + i_light);
+  // MIS
+  double w_inv = 0., ratio = 1.;
+  w_inv += ratio;
+  // travel along the eye path
+  PathVertex cur_v, next_v, prev_v;
+  for (int i = i_eye; i > 2; i--) {  // set to 2: do not consider directly connect light path to eye for now
+    cur_v = eye_path[i];
+    prev_v = i == i_eye ? light_path[i_light] : eye_path[i+1];
+    next_v = eye_path[i-1];
+    double nom, denom;
+    double p, g;
 
-  //   Matrix3x3 o2w;
-  //   make_coord_space(o2w, prev_v.isect.n);
-  //   Matrix3x3 w2o = o2w.T();
+    Matrix3x3 o2w;
+    make_coord_space(o2w, prev_v.isect.n);
+    Matrix3x3 w2o = o2w.T();
 
-  //   Vector3D wi, wo, wi_world;
-  //   double dist;
-  //   wo = Vector3D(); // filled with empty for now (TODO)
-  //   wi_world = cur_v.position - prev_v.position;
-  //   dist = wi_world.norm();
-  //   wi_world.normalize();
-  //   wi = w2o * wi_world;
-  //   if (i_light == 0 && i == i_eye) {
-  //     // todo: eye path intersects lights
-  //   } else if (i_light == 1 && i == i_eye) {
-  //     // eye path directly connects to the lights
-  //     // double point_pdf, dir_pdf, d;
-  //     // prev_v.light->sample_Le_point(cur_v.position, &wi_world, &d, &point_pdf, &dir_pdf);
-  //   } else {
-  //     p = prev_v.isect.bsdf->sample_pdf(wo, wi) * prev_v.q;
-  //   }
-  //   g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
-  //   nom = p * g;
+    Vector3D wi, wo, wi_world;
+    double dist;
+    wo = Vector3D(); // filled with empty for now (TODO)
+    wi_world = cur_v.position - prev_v.position;
+    dist = wi_world.norm();
+    wi_world.normalize();
+    wi = w2o * wi_world;
 
-  //   make_coord_space(o2w, next_v.isect.n);
-  //   w2o = o2w.T();
+    g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
+    if (i_light == 0 && i == i_eye) {
+      // todo: eye path intersects lights
+      // todo: get the probability of sampling the intersection point on the light source
+      bool intersect_light = false;
+      for (int j = 0; j < scene->lights.size(); j++) {
+        if (scene->lights[j]->contain_point(cur_v.position)) {
+          intersect_light = true;
+          g = 1.;
+          double point_pdf, dir_pdf;
+          scene->lights[j]->sample_pdf(cur_v.position, Vector3D(), &point_pdf, &dir_pdf);
+          p = point_pdf;
+          break;
+        }
+      }
+      if (!intersect_light) {
+        return 0.;
+      }
+    } else if (i_light == 1 && i == i_eye) {
+      // eye path directly connects to the lights, use alternative light sample
+      assert(light_sample.new_light_sample);
+      p = light_sample.light_dir_pdf * light_sample.q;
+    } else {
+      p = prev_v.isect.bsdf->sample_pdf(wo, wi) * prev_v.q;
+    }
+    nom = p * g;
+    // std::cout << "eye path: p: " << p << " g: " << g << " nom: " << nom << std::endl;
 
-  //   wi_world = cur_v.position - next_v.position;
-  //   dist = wi_world.norm();
-  //   wi_world.normalize();
-  //   wi = w2o * wi_world;
-  //   p = next_v.isect.bsdf->sample_pdf(wo, wi) * next_v.q;
-  //   g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
-  //   denom = p * g;
+    make_coord_space(o2w, next_v.isect.n);
+    w2o = o2w.T();
 
-  //   ratio *= nom / denom;
-  //   w_inv += ratio * ratio;
-  // }
-  // // TODO: travel along the light path
-  // ratio = 1.;
-  // for (int i = i_light; i > 0; i--) {
-  //   cur_v = light_path[i];
-  //   prev_v = i == i_light? eye_path[i_eye] : light_path[i+1];
-  //   next_v = light_path[i-1];
-  //   double nom, denom;
-  //   double p, g;
+    wi_world = cur_v.position - next_v.position;
+    dist = wi_world.norm();
+    wi_world.normalize();
+    wi = w2o * wi_world;
 
-  //   Matrix3x3 o2w;
-  //   make_coord_space(o2w, prev_v.isect.n);
-  //   Matrix3x3 w2o = o2w.T();
+    if (i == 2) {
+      // next_v is on the camera lens
+      p = 1.;  // todo: density = 1 ? and q is also 1 ?
+    } else {
+      p = next_v.isect.bsdf->sample_pdf(wo, wi) * next_v.q;
+    }
+    g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
+    denom = p * g;
+    // std::cout << "eye path: p: " << p << " g: " << g << " denom: " << denom << std::endl;
 
-  //   Vector3D wi, wo, wi_world;
-  //   double dist;
-  //   wo = Vector3D(); // filled with empty for now (TODO)
-  //   wi_world = cur_v.position - prev_v.position;
-  //   dist = wi_world.norm();
-  //   wi_world.normalize();
-  //   wi = w2o * wi_world;
-  //   if (i_eye <= 1) {
-  //     // light vertex directly connects to eye
-  //     p = 1.;  // todo: density = 1 ? and q is also 1 ?
-  //   } else {
-  //     p = prev_v.isect.bsdf->sample_pdf(wo, wi) * prev_v.q;
-  //   }
-  //   g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
-  //   nom = p * g;
+    ratio *= nom / denom;
+    w_inv += ratio * ratio;
+  }
+  // TODO: travel along the light path
+  ratio = 1.;
+  for (int i = i_light; i > 0; i--) {
+    cur_v = light_path[i];
+    prev_v = i == i_light? eye_path[i_eye] : light_path[i+1];
+    next_v = light_path[i-1];
+    double nom, denom;
+    double p, g;
 
-  //   if (i > 1) {
-  //     make_coord_space(o2w, next_v.isect.n);
-  //     w2o = o2w.T();
+    Matrix3x3 o2w;
+    make_coord_space(o2w, prev_v.isect.n);
+    Matrix3x3 w2o = o2w.T();
 
-  //     wi_world = cur_v.position - next_v.position;
-  //     dist = wi_world.norm();
-  //     wi_world.normalize();
-  //     wi = w2o * wi_world;
-  //     p = next_v.isect.bsdf->sample_pdf(wo, wi) * next_v.q;
-  //     g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
-  //     denom = p * g;
+    Vector3D wi, wo, wi_world;
+    double dist;
+    wo = Vector3D(); // filled with empty for now (TODO)
+    wi_world = cur_v.position - prev_v.position;
+    dist = wi_world.norm();
+    wi_world.normalize();
+    wi = w2o * wi_world;
+    if (i_eye <= 1) {
+      // light vertex directly connects to eye
+      p = 1.;  // todo: density = 1 ? and q is also 1 ?
+    } else {
+      p = prev_v.isect.bsdf->sample_pdf(wo, wi) * prev_v.q;
+    }
+    g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
+    nom = p * g;
+    // std::cout << "light path: p: " << p << " g: " << g << " nom: " << nom << std::endl;
 
-  //   } else {
-  //     // one vertex is on the light source
-  //     denom = light_pdf;
-  //   }
-  //   ratio *= nom / denom;
-  //   w_inv += ratio * ratio;
-  // }
-  // return 1. / w_inv;
+    if (i > 1) {
+      make_coord_space(o2w, next_v.isect.n);
+      w2o = o2w.T();
+
+      wi_world = cur_v.position - next_v.position;
+      dist = wi_world.norm();
+      wi_world.normalize();
+      // cout << "wi_world: " << wi_world << endl;
+      wi = w2o * wi_world;
+      // cout << "wi: " << wi << endl;
+      if (i == 2) {
+        // next_v is on the light source
+        p = next_v.light_dir_pdf;
+      } else {
+        p = next_v.isect.bsdf->sample_pdf(wo, wi) * next_v.q;
+      }
+      g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
+      denom = p * g;
+      // std::cout << "light path: p: " << p << " g: " << g << " denom: " << denom << std::endl;
+
+    } else {
+      // one vertex is on the light source
+      denom = cur_v.p; // for initial vertex on light: p = p_area
+      // std::cout << "light path: denom: " << denom << std::endl;
+    }
+    ratio *= nom / denom;
+    w_inv += ratio * ratio;
+  }
+  // std::cout << "i_eye: " << i_eye << " i_light: " << i_light << " w: " << 1. / w_inv << std::endl;
+  return 1. / w_inv;
 }
 
 
 Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
   int i_eye, int i_light, const vector<PathVertex>& eye_path, 
-  const vector<PathVertex>& light_path, double light_pdf
+  const vector<PathVertex>& light_path
 ) {
   // do not handle special cases for now
   PathVertex ve, vl, light_sample;  // i_light = 1 --> use another light sample
@@ -322,7 +358,7 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
     // std::cout << "c: " << c << std::endl;
   }
   // multiple importance sampling
-  double w = multiple_importance_sampling_weight(i_eye, i_light, eye_path, light_path, light_pdf, light_sample);
+  double w = multiple_importance_sampling_weight(i_eye, i_light, eye_path, light_path, light_sample);
   
   Vector3D ill, contrib;
   Vector3D light_alpha = i_light == 1 ? light_sample.alpha : light_path[i_light].alpha;
@@ -341,19 +377,19 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
   prepare_bidirectional_subpath(r, 1., 1., eye_path, Vector3D(1., 1., 1.), r.d, false, nullptr);
   Ray light_init_ray;
   Vector3D light_init_radiance, light_init_normal;
-  double light_pdf, light_dir_pdf;
+  double light_point_pdf, light_dir_pdf;
   SceneLight *light;
-  light_init_ray = sample_light_ray(light_pdf, light_dir_pdf, light_init_radiance,
+  light_init_ray = sample_light_ray(light_point_pdf, light_dir_pdf, light_init_radiance,
                                     light_init_normal, light);
-  prepare_bidirectional_subpath(light_init_ray, light_pdf, light_dir_pdf, 
+  prepare_bidirectional_subpath(light_init_ray, light_point_pdf, light_dir_pdf, 
                                 light_path, light_init_radiance,
                                 light_init_normal, true, light);
 
   // connect different paths
   for (int i = 1; i < eye_path.size(); i++) {
     for (int j = 0; j < light_path.size(); j++) {
-      // if (i + j > 5) continue;  // do not consider bounces more than 1 for now
-      Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path, light_pdf);
+      if (i + j > 4) continue;  // do not consider bounces more than 1 for now
+      Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path);
       L_out += L_in;
     }
   }

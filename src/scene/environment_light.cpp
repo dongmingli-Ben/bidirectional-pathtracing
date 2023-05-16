@@ -194,5 +194,18 @@ namespace CGL { namespace SceneObjects {
     return Vector3D();
   }
 
+  bool EnvironmentLight::contain_point(const Vector3D& p) const {
+    std::cout << "contain_point not ready for EnvironmentLight" << std::endl;
+    assert(0);
+    return false;
+  }
+
+  Vector3D EnvironmentLight::sample_pdf(const Vector3D &p, const Vector3D &wi,
+                              double* point_pdf, double* dir_pdf) const {
+    std::cout << "sample_pdf not ready for EnvironmentLight" << std::endl;
+    assert(0);
+    return Vector3D();
+  }
+
 } // namespace SceneObjects
 } // namespace CGL
