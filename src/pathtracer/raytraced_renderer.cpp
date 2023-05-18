@@ -616,7 +616,7 @@ void RaytracedRenderer::raytrace_tile(int tile_x, int tile_y,
 
   tile_samples[tile_idx_x + tile_idx_y * num_tiles_w] += 1;
 
-  pt->write_to_framebuffer(frameBuffer, tile_start_x, tile_start_y, tile_end_x, tile_end_y);
+  pt->write_to_framebuffer(frameBuffer, 0, 0, frameBuffer.w, frameBuffer.h);
 }
 
 void RaytracedRenderer::raytrace_cell(ImageBuffer& buffer) {

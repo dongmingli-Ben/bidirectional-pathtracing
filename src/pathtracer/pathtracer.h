@@ -33,14 +33,14 @@ namespace CGL {
          * \param width width of the frame
          * \param height height of the frame
          */
-        void set_frame_size(size_t width, size_t height);
+        virtual void set_frame_size(size_t width, size_t height);
 
         void write_to_framebuffer(ImageBuffer& framebuffer, size_t x0, size_t y0, size_t x1, size_t y1);
 
         /**
          * If the pathtracer is in READY, delete all internal data, transition to INIT.
          */
-        void clear();
+        virtual void clear();
 
         void autofocus(Vector2D loc);
 

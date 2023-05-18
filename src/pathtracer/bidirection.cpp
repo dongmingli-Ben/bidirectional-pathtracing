@@ -414,49 +414,58 @@ void BidirectionalPathTracer::raytrace_pixel(size_t x, size_t y) {
   // Modify your implementation to include adaptive sampling.
   // Use the command line parameters "samplesPerBatch" and "maxTolerance"
 
-  int num_samples = 0;          // total samples to evaluate
   Vector2D origin = Vector2D(x, y); // bottom left corner of the pixel
   Vector3D illumination(0, 0, 0);
   double s1 = 0, s2 = 0;
-  for (int i = 0; i < ns_aa; i = i + samplesPerBatch) {
-    for (int j = 0; j < samplesPerBatch; j++) {
-      Vector2D pixel_pos = gridSampler->get_sample();
-      pixel_pos.x = pixel_pos.x + origin.x;
-      pixel_pos.y = pixel_pos.y + origin.y;
-      Ray ray;
-      double dx, dy;
-      dx = pixel_pos.x / sampleBuffer.w;
-      dy = pixel_pos.y / sampleBuffer.h;
-      ray = camera->generate_ray(dx, dy);  // TODO: density = 1 ???
-      // Vector2D samplesForLens = gridSampler->get_sample();
-      // ray = camera->generate_ray(dx, dy, samplesForLens.x, samplesForLens.y * 2.0 * PI);
-      Vector3D ill;
-      ill = est_radiance_global_illumination(ray);
-      // if (ill.x < 0 || ill.y < 0 || ill.z < 0 || ill.x >= INF_D || ill.y >= INF_D || ill.z >= INF_D) {
-      //   std::cout << "Invalid ill: " << ill << std::endl;
-      // }
-      illumination += ill;
-      double illum = ill.illum();
-      s1 += illum;
-      s2 += illum*illum;
-    }
-    double mu, sigma;
-    num_samples = i+samplesPerBatch;
-    mu = s1 / num_samples;
-    sigma = sqrt((s2 - s1*s1/num_samples) / (num_samples-1));
-    double ci;
-    ci = 1.96 * sigma / sqrt(num_samples);
-    if (ci <= maxTolerance*mu && mu > EPS_F) {
-      // cout << "mu: " << mu << " sigma: " << sigma << " ci: " << ci << endl;
-      break;
-    }
+  for (int i = 0; i < ns_aa; i++) {
+    // * note: do not use adaptive sampling, it introduces bias for BDPT
+    Vector2D pixel_pos = gridSampler->get_sample();
+    pixel_pos.x = pixel_pos.x + origin.x;
+    pixel_pos.y = pixel_pos.y + origin.y;
+    Ray ray;
+    double dx, dy;
+    dx = pixel_pos.x / sampleBuffer.w;
+    dy = pixel_pos.y / sampleBuffer.h;
+    ray = camera->generate_ray(dx, dy);  // TODO: density = 1 ???
+    // Vector2D samplesForLens = gridSampler->get_sample();
+    // ray = camera->generate_ray(dx, dy, samplesForLens.x, samplesForLens.y * 2.0 * PI);
+    Vector3D ill;
+    ill = est_radiance_global_illumination(ray);
+    // if (ill.x < 0 || ill.y < 0 || ill.z < 0 || ill.x >= INF_D || ill.y >= INF_D || ill.z >= INF_D) {
+    //   std::cout << "Invalid ill: " << ill << std::endl;
+    // }
+    illumination += ill;
+    double illum = ill.illum();
+    s1 += illum;
+    s2 += illum*illum;
   }
-  illumination /= num_samples;
+  illumination /= ns_aa;
 
   sampleBuffer.update_pixel(illumination, x, y);
-  sampleCountBuffer[x + y * sampleBuffer.w] = num_samples;
+  sampleCountBuffer[x + y * sampleBuffer.w] = ns_aa;
 
 
+}
+
+void BidirectionalPathTracer::set_frame_size(size_t width, size_t height) {
+  sampleBuffer.resize(width, height);
+  sampleCountBuffer.resize(width * height);
+  eyeBuffer.resize(width, height);
+  lightBuffer.resize(width, height);
+}
+
+void BidirectionalPathTracer::clear() {
+  bvh = NULL;
+  scene = NULL;
+  camera = NULL;
+  sampleBuffer.clear();
+  sampleCountBuffer.clear();
+  eyeBuffer.clear();
+  lightBuffer.clear();
+  sampleBuffer.resize(0, 0);
+  sampleCountBuffer.resize(0, 0);
+  eyeBuffer.resize(0, 0);
+  lightBuffer.resize(0, 0);
 }
 
 } // namespace CGL

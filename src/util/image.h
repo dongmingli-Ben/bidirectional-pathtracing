@@ -114,6 +114,17 @@ struct HDRImageBuffer {
   }
 
   /**
+   * get the color of a given pixel.
+   * \param x row of the pixel
+   * \param y column of the pixel
+   */
+  Vector3D get_pixel(size_t x, size_t y) {
+    // assert(0 <= x && x < w);
+    // assert(0 <= y && y < h);
+    return data[x + y * w];
+  }
+
+  /**
    * Update the color of a given pixel.
    * \param s new Vector3D value to be set
    * \param x row of the pixel

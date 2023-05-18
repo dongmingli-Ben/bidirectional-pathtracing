@@ -74,11 +74,16 @@ namespace CGL {
 
         size_t min_subpath_length = 2;
         Sampler1D discrete_sampler;
+        HDRImageBuffer eyeBuffer, lightBuffer;   ///< sample buffer for eye image and light image
 
         // override
-
+        // also update estimation to light and eye images
+        // \return the illuminace for the eye image
         Vector3D est_radiance_global_illumination(const Ray& r);
         void raytrace_pixel(size_t x, size_t y);
+
+        void set_frame_size(size_t width, size_t height);
+        void clear();
     };
 }
 
