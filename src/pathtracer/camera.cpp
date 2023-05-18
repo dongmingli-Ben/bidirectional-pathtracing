@@ -143,6 +143,7 @@ void Camera::compute_position() {
                                  // directly using dirToCamera as
                                  // column 2 of the matrix takes [0 0 -1]
                                  // to the world space view direction
+  w2c = c2w.inv();
 }
 
 /**
@@ -208,6 +209,37 @@ Ray Camera::generate_ray(double x, double y) const {
 
   return ray;
 
+}
+
+Vector3D Camera::sample_ray_pdf(const Vector3D& p, Vector3D *wi, 
+    Vector3D *eye_point, double *dist, double *point_pdf, 
+    double *dir_pdf, Vector3D *normal, int *x, int *y, 
+    const int w, const int h) {
+  *wi = position() - p;
+  *dist = (*wi).norm();
+  (*wi).normalize();
+  *eye_point = position();
+  *point_pdf = 1.0;
+
+  double theta, phi;
+  Vector3D wc = w2c * (- *wi);
+  wc.z = - wc.z;
+  theta = acos(wc.z);
+  phi = atan2(wc.y, wc.x);
+  // *dir_pdf = tan(theta) / pow(cos(theta), 2);
+  *dir_pdf = 1 / pow(cos(theta), 3);   // todo:  WHY  ???
+  // *dir_pdf *= 2*PI / wc.z; // another change of measure to uniform solid angles
+
+  *normal = - (*wi);
+
+  wc /= wc.z;
+  *x = ((wc.x / tan(hFov*PI/360) + 1) * 0.5) * w;
+  *y = ((wc.y / tan(vFov*PI/360) + 1) * 0.5) * h;
+
+  // cout << "wc: " << wc << " half-width: " << tan(hFov*PI/360) << " half-height: " << tan(vFov*PI/360) << endl;
+  // cout << "p: " << p << " x: " << *x << " y: " << *y << endl;
+
+  return Vector3D(1.) / (*dir_pdf);
 }
 
 } // namespace CGL

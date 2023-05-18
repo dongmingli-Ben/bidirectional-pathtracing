@@ -29,7 +29,7 @@ namespace CGL {
     class PathVertex {
         public:
             PathVertex() : p(1.), q(1.), alpha(1.), is_light(false), light(nullptr),
-                new_light_sample(false), light_dir_pdf(0.) {}
+                new_sample(false), dir_pdf(0.) {}
 
             Intersection isect;
             double p;
@@ -38,10 +38,10 @@ namespace CGL {
             Vector3D alpha, position;
             bool is_light;
             SceneLight *light;
-            bool new_light_sample;
-            double light_dir_pdf; // this value is only valid for the first point 
-                                  // on the light source. it is for MIS with newly sampled
-                                  // light point (or old light point)
+            bool new_sample;
+            double dir_pdf; // this value is only valid for the first point 
+                            // on the light source / len. it is for MIS with newly sampled
+                            // light/eye point (or old light/eye point)
 
     };
 
@@ -70,11 +70,16 @@ namespace CGL {
 
         double multiple_importance_sampling_weight(int i_eye, int i_light,
             const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path,
-            const PathVertex& light_sample);
+            const PathVertex& light_sample, const PathVertex& eye_sample);
+
+        // cumulative s to current pixel value at (x, y)
+        // * note: need to acquire lock ???
+        void update_pixel(HDRImageBuffer &target, size_t x, size_t y, const Vector3D& s);
 
         size_t min_subpath_length = 2;
         Sampler1D discrete_sampler;
         HDRImageBuffer eyeBuffer, lightBuffer;   ///< sample buffer for eye image and light image
+        std::mutex update_lock; ///< lock to avoid concurrent updates to light buffer ???
 
         // override
         // also update estimation to light and eye images

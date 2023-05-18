@@ -90,6 +90,13 @@ class Camera {
 
   Ray generate_ray_for_thin_lens(double x, double y, double rndR, double rndTheta) const;
 
+  // sample a ray given the point p.
+  // note: wi points towards the camera, and x and y are the pixel coordinates
+  // on the image plane
+  Vector3D sample_ray_pdf(const Vector3D& p, Vector3D *wi, Vector3D *eye_point,
+    double *dist, double *point_pdf, double *dir_pdf, Vector3D *normal,
+    int *x, int *y, const int w, const int h);
+  
   // Lens aperture and focal distance for depth of field effects.
   double lensRadius;
   double focalDistance;
@@ -110,7 +117,7 @@ class Camera {
   // camera-to-world rotation matrix (note: also need to translate a
   // camera-space point by 'pos' to perform a full camera-to-world
   // transform)
-  Matrix3x3 c2w;
+  Matrix3x3 c2w, w2c;
 
   // Info about screen to render to; it corresponds to the camera's full field
   // of view at some distance.

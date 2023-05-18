@@ -33,7 +33,7 @@ void BidirectionalPathTracer::prepare_bidirectional_subpath(
   v.q = 1.;
   v.is_light = is_light;
   v.light = light;
-  v.light_dir_pdf = dir_pdf;
+  v.dir_pdf = dir_pdf;
   path.push_back(v);
 
   int i = 2;
@@ -120,15 +120,16 @@ Ray BidirectionalPathTracer::sample_light_ray(double &point_pdf,
 
 double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, int i_light,
             const vector<PathVertex>& eye_path, const vector<PathVertex>& light_path,
-            const PathVertex& light_sample) {
+            const PathVertex& light_sample, const PathVertex& eye_sample) {
   // // no MIS
-  // return i_eye+i_light > 1 ? 1. / (i_eye + i_light - 1) : 1.;
+  // // return 1.;
+  // return 1. / (i_eye + i_light);
   // MIS
   double w_inv = 0., ratio = 1.;
   w_inv += ratio;
   // travel along the eye path
   PathVertex cur_v, next_v, prev_v;
-  for (int i = i_eye; i > 2; i--) {  // set to 2: do not consider directly connect light path to eye for now
+  for (int i = i_eye; i > 1; i--) {  // set to 2: do not consider directly connect light path to eye for now
     cur_v = eye_path[i];
     if (i == i_eye) {
       prev_v = i_light == 1 ? light_sample : light_path[i_light];
@@ -153,8 +154,8 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
 
     g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
     if (i_light == 0 && i == i_eye) {
-      // todo: eye path intersects lights
-      // todo: get the probability of sampling the intersection point on the light source
+      // eye path intersects lights
+      // get the probability of sampling the intersection point on the light source
       bool intersect_light = false;
       for (int j = 0; j < scene->lights.size(); j++) {
         if (scene->lights[j]->contain_point(cur_v.position)) {
@@ -171,8 +172,8 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
       }
     } else if (i_light == 1 && i == i_eye) {
       // eye path directly connects to the lights, use alternative light sample
-      assert(light_sample.new_light_sample);
-      p = light_sample.light_dir_pdf * light_sample.q;
+      assert(light_sample.new_sample);
+      p = light_sample.dir_pdf * light_sample.q;
     } else {
       p = prev_v.isect.bsdf->sample_pdf(wo, wi) * prev_v.q;
     }
@@ -187,13 +188,15 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
     wi_world.normalize();
     wi = w2o * wi_world;
 
+    g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
     if (i == 2) {
       // next_v is on the camera lens
-      p = 1.;  // todo: density = 1 ? and q is also 1 ?
+      // denom = p_ray (since the ray is sampled uniformly from the image plane, it is 1)
+      p = 1.;
+      g = 1.;
     } else {
       p = next_v.isect.bsdf->sample_pdf(wo, wi) * next_v.q;
     }
-    g = fabs(cos_theta(wi) * dot(wi_world, cur_v.isect.n)) / (dist * dist);
     denom = p * g;
     // std::cout << "eye path: p: " << p << " g: " << g << " denom: " << denom << std::endl;
 
@@ -204,7 +207,11 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
   ratio = 1.;
   for (int i = i_light; i > 0; i--) {
     cur_v = light_path[i];
-    prev_v = i == i_light? eye_path[i_eye] : light_path[i+1];
+    if (i == i_light) {
+      prev_v = i_eye == 1 ? eye_sample : eye_path[i_eye];
+    } else {
+      prev_v = light_path[i+1];
+    }
     next_v = light_path[i-1];
     double nom, denom;
     double p, g;
@@ -220,9 +227,10 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
     dist = wi_world.norm();
     wi_world.normalize();
     wi = w2o * wi_world;
-    if (i_eye <= 1) {
+    if (i_eye <= 1 && i == i_light) {
       // light vertex directly connects to eye
-      p = 1.;  // todo: density = 1 ? and q is also 1 ?
+      assert(eye_sample.new_sample);
+      p = eye_sample.dir_pdf * eye_sample.q;
     } else {
       p = prev_v.isect.bsdf->sample_pdf(wo, wi) * prev_v.q;
     }
@@ -242,7 +250,7 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
       // cout << "wi: " << wi << endl;
       if (i == 2) {
         // next_v is on the light source
-        p = next_v.light_dir_pdf;
+        p = next_v.dir_pdf;
       } else {
         p = next_v.isect.bsdf->sample_pdf(wo, wi) * next_v.q;
       }
@@ -269,6 +277,8 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
 ) {
   // do not handle special cases for now
   PathVertex ve, vl, light_sample;  // i_light = 1 --> use another light sample
+  PathVertex eye_sample; // i_eye = 1 --> use another eye sample that is valid for connection
+  int eye_x = -1, eye_y = -1; // the coordinate on the image plane for i_eye = 1 case
   ve = eye_path[i_eye];
   vl = light_path[i_light];
   Vector3D c;
@@ -280,27 +290,6 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
   } else {
     Vector3D eye_ray, light_ray, connect_ray;
     Vector3D f_eye, f_light;
-    if (i_eye == 1) {
-      // light path directly connects to camera lens, which does not
-      // contribute to the current pixel
-      // todo: this is a special case, the illuminance contributes to the `light` image
-      f_eye = Vector3D(0., 0., 0.);
-    } else {
-      Matrix3x3 o2w;
-      make_coord_space(o2w, eye_path[i_eye].isect.n);
-      Matrix3x3 w2o = o2w.T();
-
-      eye_ray = eye_path[i_eye-1].position - eye_path[i_eye].position;
-      eye_ray.normalize();
-      eye_ray = w2o * eye_ray;
-
-      connect_ray = light_path[i_light].position - eye_path[i_eye].position;
-      connect_ray.normalize();
-      connect_ray = w2o * connect_ray;
-
-      f_eye = eye_path[i_eye].isect.bsdf->f(eye_ray, connect_ray);
-    }
-    // std::cout << "f_eye: " << f_eye << std::endl;
     if (i_light == 1) {
       Vector3D light_init_radiance, light_init_normal, light_dir, light_point;
       double light_point_pdf, light_dir_pdf, dist;
@@ -322,11 +311,56 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
       light_sample.isect.n = light_init_normal;
       light_sample.is_light = true;
       light_sample.light = light;
-      light_sample.new_light_sample = true;
-      light_sample.light_dir_pdf = light_dir_pdf;
+      light_sample.new_sample = true;
+      light_sample.dir_pdf = light_dir_pdf;
 
       f_light = Vector3D(1., 1., 1.);
-    } else {
+      vl = light_sample;
+    }
+
+    if (i_eye == 1) {
+      // light path directly connects to camera lens, which does not
+      // contribute to the current pixel
+      // todo: this is a special case, the illuminance contributes to the `light` image
+      // sample the corresponding pixel
+      Vector3D eye_init_radiance, eye_init_normal, eye_dir, eye_point;
+      double eye_point_pdf, eye_dir_pdf, dist;
+      eye_init_radiance = camera->sample_ray_pdf(vl.position, &eye_dir, &eye_point, &dist, 
+                            &eye_point_pdf, &eye_dir_pdf, &eye_init_normal,
+                            &eye_x, &eye_y, sampleBuffer.w, sampleBuffer.h);
+      // eye_init_radiance = Vector3D(1., 1., 1.);
+      
+      eye_sample.p = eye_point_pdf;
+      eye_sample.alpha = eye_init_radiance / eye_point_pdf;
+      eye_sample.q = 1.;
+      eye_sample.position = eye_point;
+      eye_sample.isect.n = eye_init_normal;
+      eye_sample.is_light = false;
+      eye_sample.new_sample = true;
+      eye_sample.dir_pdf = eye_dir_pdf;
+
+      f_eye = Vector3D(1., 1., 1.);
+      ve = eye_sample;
+    }
+
+    if (i_eye > 1) {
+      Matrix3x3 o2w;
+      make_coord_space(o2w, eye_path[i_eye].isect.n);
+      Matrix3x3 w2o = o2w.T();
+
+      eye_ray = eye_path[i_eye-1].position - eye_path[i_eye].position;
+      eye_ray.normalize();
+      eye_ray = w2o * eye_ray;
+
+      connect_ray = vl.position - eye_path[i_eye].position;
+      connect_ray.normalize();
+      connect_ray = w2o * connect_ray;
+
+      f_eye = eye_path[i_eye].isect.bsdf->f(eye_ray, connect_ray);
+    }
+    // std::cout << "f_eye: " << f_eye << std::endl;
+
+    if (i_light > 1) {
       Matrix3x3 o2w;
       make_coord_space(o2w, light_path[i_light].isect.n);
       Matrix3x3 w2o = o2w.T();
@@ -335,7 +369,7 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
       light_ray.normalize();
       light_ray = w2o * light_ray;
 
-      connect_ray = eye_path[i_eye].position - light_path[i_light].position;
+      connect_ray = ve.position - light_path[i_light].position;
       connect_ray.normalize();
       connect_ray = w2o * connect_ray;
 
@@ -343,11 +377,11 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
     }
     // std::cout << "f_light: " << f_light << std::endl;
     double dist;
-    connect_ray = light_path[i_light].position - eye_path[i_eye].position;
+    connect_ray = vl.position - ve.position;
     dist = connect_ray.norm();
     connect_ray.normalize();
     double g;
-    Ray r(eye_path[i_eye].position, connect_ray);
+    Ray r(ve.position, connect_ray);
     r.min_t = EPS_F;
     r.max_t = dist - EPS_F;
     Intersection isect;
@@ -355,20 +389,38 @@ Vector3D BidirectionalPathTracer::estimate_bidirection_radiance(
     if (bvh->intersect(r, &isect)) {
       return Vector3D();
     } else {
-      g = fabs(dot(light_path[i_light].isect.n, connect_ray) * dot(eye_path[i_eye].isect.n, connect_ray))
+      g = fabs(dot(vl.isect.n, connect_ray) * dot(ve.isect.n, connect_ray))
         / (dist * dist);
     }
-    // std::cout << "g: " << g << std::endl;
+    // std::cout << "g: " << g << " dist: " << dist << std::endl;
     c = f_eye * g * f_light;
     // std::cout << "c: " << c << std::endl;
   }
-  // multiple importance sampling
-  double w = multiple_importance_sampling_weight(i_eye, i_light, eye_path, light_path, light_sample);
   
   Vector3D ill, contrib;
   Vector3D light_alpha = i_light == 1 ? light_sample.alpha : light_path[i_light].alpha;
-  contrib = eye_path[i_eye].alpha * light_alpha * c;
+  Vector3D eye_alpha = i_eye == 1 ? eye_sample.alpha : eye_path[i_eye].alpha;
+  double w = 0.;
+  // cout << "contrib: " << contrib << " eye alpha: " << eye_alpha << " light alpha: " << light_alpha << endl;
+  contrib = eye_alpha * light_alpha * c;
+  if (contrib.norm() > EPS_F) {
+    // multiple importance sampling
+    w = multiple_importance_sampling_weight(
+      i_eye, i_light, eye_path, light_path, 
+      light_sample, eye_sample);
+  }
   ill = contrib * w;
+  if (i_eye == 1) {
+    // update to light image
+    if (eye_x >= 0 && eye_y >= 0 && eye_x < sampleBuffer.w && eye_y < sampleBuffer.h) {
+      update_pixel(lightBuffer, eye_x, eye_y, ill / ns_aa);
+      update_pixel(sampleBuffer, eye_x, eye_y, ill / ns_aa);
+    } else {
+      // cout << "out of image | x: " << eye_x << " y: " << eye_y << endl;
+    }
+    // do not contribute to eye image
+    return Vector3D();
+  }
   return ill;
 }
 
@@ -393,8 +445,8 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
   // connect different paths
   for (int i = 1; i < eye_path.size(); i++) {
     for (int j = 0; j < light_path.size(); j++) {
-      // if (i + j != 4) continue;  // do not consider bounces more than 1 for now
-      // if (i != 2) continue;  // do not consider bounces more than 1 for now
+      // if (i + j != 3) continue;  // do not consider bounces more than 1 for now
+      // if (i != 1) continue;  // do not consider bounces more than 1 for now
       Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path);
       L_out += L_in;
     }
@@ -416,7 +468,6 @@ void BidirectionalPathTracer::raytrace_pixel(size_t x, size_t y) {
 
   Vector2D origin = Vector2D(x, y); // bottom left corner of the pixel
   Vector3D illumination(0, 0, 0);
-  double s1 = 0, s2 = 0;
   for (int i = 0; i < ns_aa; i++) {
     // * note: do not use adaptive sampling, it introduces bias for BDPT
     Vector2D pixel_pos = gridSampler->get_sample();
@@ -436,15 +487,23 @@ void BidirectionalPathTracer::raytrace_pixel(size_t x, size_t y) {
     // }
     illumination += ill;
     double illum = ill.illum();
-    s1 += illum;
-    s2 += illum*illum;
   }
   illumination /= ns_aa;
 
-  sampleBuffer.update_pixel(illumination, x, y);
+  eyeBuffer.update_pixel(illumination, x, y);
+  update_pixel(sampleBuffer, x, y, illumination);
   sampleCountBuffer[x + y * sampleBuffer.w] = ns_aa;
 
 
+}
+
+void BidirectionalPathTracer::update_pixel(HDRImageBuffer &target, size_t x, size_t y, const Vector3D& s) {
+  Vector3D w;
+  // update_lock.lock();
+  w = target.get_pixel(x, y);
+  w += s;
+  target.update_pixel(w, x, y);
+  // update_lock.unlock();
 }
 
 void BidirectionalPathTracer::set_frame_size(size_t width, size_t height) {
