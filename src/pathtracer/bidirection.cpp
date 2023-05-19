@@ -201,6 +201,11 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
     // std::cout << "eye path: p: " << p << " g: " << g << " denom: " << denom << std::endl;
 
     ratio *= nom / denom;
+
+    if ((cur_v.isect.bsdf != NULL && cur_v.isect.bsdf->is_delta())
+        || (next_v.isect.bsdf != NULL && next_v.isect.bsdf->is_delta())) {
+      continue;
+    }
     w_inv += ratio * ratio;
   }
   // TODO: travel along the light path
@@ -264,6 +269,11 @@ double BidirectionalPathTracer::multiple_importance_sampling_weight(int i_eye, i
       // std::cout << "light path: denom: " << denom << std::endl;
     }
     ratio *= nom / denom;
+
+    if ((cur_v.isect.bsdf != NULL && cur_v.isect.bsdf->is_delta())
+        || (next_v.isect.bsdf != NULL && next_v.isect.bsdf->is_delta())) {
+      continue;
+    }
     w_inv += ratio * ratio;
   }
   // std::cout << "i_eye: " << i_eye << " i_light: " << i_light << " w: " << 1. / w_inv << std::endl;
@@ -445,7 +455,7 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
   // connect different paths
   for (int i = 1; i < eye_path.size(); i++) {
     for (int j = 0; j < light_path.size(); j++) {
-      // if (i + j != 3) continue;  // do not consider bounces more than 1 for now
+      // if (i + j != 5) continue;  // do not consider bounces more than 1 for now
       // if (i != 3) continue;  // do not consider bounces more than 1 for now
       Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path);
       L_out += L_in;

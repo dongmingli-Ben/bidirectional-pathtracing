@@ -30,9 +30,8 @@ Vector3D MirrorBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) {
 
 
 double MirrorBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
-  std::cout << "sample_pdf not ready for MirrorBSDF" << std::endl;
-  assert(0);
-  return 0.;
+  // coefficient for proportion of dirac delta distribution
+  return 1.;
 }
 
 void MirrorBSDF::render_debugger_node()
@@ -180,9 +179,8 @@ Vector3D RefractionBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) 
 
 
 double RefractionBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
-  std::cout << "sample_pdf not ready for RefractionBSDF" << std::endl;
-  assert(0);
-  return 0.;
+  // proportion of dirac delta distribution
+  return 1.;
 }
 
 void RefractionBSDF::render_debugger_node()
