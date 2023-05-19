@@ -446,7 +446,7 @@ Vector3D BidirectionalPathTracer::est_radiance_global_illumination(const Ray &r)
   for (int i = 1; i < eye_path.size(); i++) {
     for (int j = 0; j < light_path.size(); j++) {
       // if (i + j != 3) continue;  // do not consider bounces more than 1 for now
-      // if (i != 1) continue;  // do not consider bounces more than 1 for now
+      // if (i != 3) continue;  // do not consider bounces more than 1 for now
       Vector3D L_in = estimate_bidirection_radiance(i, j, eye_path, light_path);
       L_out += L_in;
     }
@@ -499,11 +499,11 @@ void BidirectionalPathTracer::raytrace_pixel(size_t x, size_t y) {
 
 void BidirectionalPathTracer::update_pixel(HDRImageBuffer &target, size_t x, size_t y, const Vector3D& s) {
   Vector3D w;
-  // update_lock.lock();
+  update_lock.lock();
   w = target.get_pixel(x, y);
   w += s;
   target.update_pixel(w, x, y);
-  // update_lock.unlock();
+  update_lock.unlock();
 }
 
 void BidirectionalPathTracer::set_frame_size(size_t width, size_t height) {

@@ -226,9 +226,14 @@ Vector3D Camera::sample_ray_pdf(const Vector3D& p, Vector3D *wi,
   wc.z = - wc.z;
   theta = acos(wc.z);
   phi = atan2(wc.y, wc.x);
+  double denom;
   // *dir_pdf = tan(theta) / pow(cos(theta), 2);
-  *dir_pdf = 1 / pow(cos(theta), 3);   // todo:  WHY  ???
+  // * note: according to https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation#PerspectiveCamera::We
+  // where A is the image plane size = 4 * tan(hFov*PI/360) * tan(vFov*PI/360)
+  denom = 4 * tan(hFov*PI/360) * tan(vFov*PI/360) / pow(cos(theta), 4) ;   // todo:  WHY  ???
   // *dir_pdf *= 2*PI / wc.z; // another change of measure to uniform solid angles
+  // according to https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation#PerspectiveCamera::We
+  *dir_pdf = (*dist * *dist) / cos(theta);   // todo: WHY ???
 
   *normal = - (*wi);
 
@@ -239,7 +244,7 @@ Vector3D Camera::sample_ray_pdf(const Vector3D& p, Vector3D *wi,
   // cout << "wc: " << wc << " half-width: " << tan(hFov*PI/360) << " half-height: " << tan(vFov*PI/360) << endl;
   // cout << "p: " << p << " x: " << *x << " y: " << *y << endl;
 
-  return Vector3D(1.) / (*dir_pdf);
+  return Vector3D(1.) / denom;
 }
 
 } // namespace CGL
