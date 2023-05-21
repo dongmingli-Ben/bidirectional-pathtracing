@@ -237,9 +237,25 @@ Vector3D GlassBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) {
 
 
 double GlassBSDF::sample_pdf(const Vector3D& wo, const Vector3D& wi) const {
-  std::cout << "sample_pdf not ready for GlassBSDF" << std::endl;
-  assert(0);
-  return 0.;
+  Vector3D wo_reflect, wo_refract, wi_;
+  bool total_internal_reflection;
+  wi_ = wi;
+  reflect(wi_, &wo_reflect);
+  total_internal_reflection = !refract(wi_, &wo_refract, ior);
+  if (total_internal_reflection) {
+    return 1.;
+  }
+  // Schlick's approximation
+  double wo_refract_costheta, eta, R, R0;
+  wo_refract_costheta = fabs(wo_refract.z) / wo_refract.norm();
+  eta = wo.z > 0 ? (double) 1 / ior : ior;
+  R0 = pow((1-eta) / (1+eta), 2);
+  R = R0 + (1-R0) * pow(1-wo_refract_costheta, 5);
+  if (wi.z > 0.) {
+    return R;
+  } else {
+    return 1 - R;
+  }
 }
 
 void GlassBSDF::render_debugger_node()
@@ -253,7 +269,7 @@ void GlassBSDF::render_debugger_node()
   }
 }
 
-void BSDF::reflect(const Vector3D wo, Vector3D* wi) {
+void BSDF::reflect(const Vector3D wo, Vector3D* wi) const {
 
   // TODO Assignment 7: Part 1
   // Implement reflection of wo about normal (0,0,1) and store result in wi.
@@ -261,7 +277,7 @@ void BSDF::reflect(const Vector3D wo, Vector3D* wi) {
 
 }
 
-bool BSDF::refract(const Vector3D wo, Vector3D* wi, double ior) {
+bool BSDF::refract(const Vector3D wo, Vector3D* wi, double ior) const {
 
   // TODO Assignment 7: Part 1
   // Use Snell's Law to refract wo surface and store result ray in wi.
