@@ -1,6 +1,6 @@
 # Bidirectional Path Tracing
 
-In this project, I implemented the bidirectional path tracing (BDPT) algorithm based on [Veach's paper](). I strictly follow Veach's description with efficient roulette and support for delta surfaces. Following images are rendering results with 128 samples per pixel.
+In this project, I implemented the bidirectional path tracing (BDPT) algorithm based on [Veach's paper](https://graphics.stanford.edu/papers/veach_thesis/thesis-bw.pdf). I strictly follow Veach's description with efficient roulette and support for delta surfaces. Following images are rendering results with 128 samples per pixel.
 
 ![image](assets/CBspheres_bdpt_128.png)
 
